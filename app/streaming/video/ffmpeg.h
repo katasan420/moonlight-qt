@@ -135,6 +135,7 @@ private:
 
     // Data buffers in the queued DU are not valid
     QQueue<DECODE_UNIT> m_FrameInfoQueue;
+    QQueue<uint64_t> m_SubmitTimeQueue; // [lowlatency] time avcodec_send_packet() was called
 
     static const uint8_t k_H264TestFrame[];
     static const uint8_t k_HEVCMainTestFrame[];

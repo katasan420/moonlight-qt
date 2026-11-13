@@ -285,6 +285,7 @@ void FFmpegVideoDecoder::reset()
 
     m_FramesIn = m_FramesOut = 0;
     m_FrameInfoQueue.clear();
+    m_SubmitTimeQueue.clear();
 
     delete m_Pacer;
     m_Pacer = nullptr;
@@ -759,6 +760,9 @@ void FFmpegVideoDecoder::addVideoStats(VIDEO_STATS& src, VIDEO_STATS& dst)
     dst.pacerDroppedFrames += src.pacerDroppedFrames;
     dst.totalReassemblyTimeUs += src.totalReassemblyTimeUs;
     dst.totalDecodeTimeUs += src.totalDecodeTimeUs;
+    dst.totalDecodeQueueTimeUs += src.totalDecodeQueueTimeUs;
+    dst.totalCodecTimeUs += src.totalCodecTimeUs;
+    dst.decoderIdleSleeps += src.decoderIdleSleeps;
     dst.totalPacerTimeUs += src.totalPacerTimeUs;
     dst.totalRenderTimeUs += src.totalRenderTimeUs;
 
@@ -954,12 +958,16 @@ void FFmpegVideoDecoder::stringifyVideoStats(VIDEO_STATS& stats, char* output, i
                        "Frames dropped due to network jitter: %.2f%%\n"
                        "Average network latency: %s\n"
                        "Average decoding time: %.2f ms\n"
+                       "  - waiting for decoder: %.2f ms / in decoder: %.2f ms / idle sleeps: %u\n"
                        "Average frame queue delay: %.2f ms\n"
                        "Average rendering time (including monitor V-sync latency): %.2f ms\n",
                        (float)stats.networkDroppedFrames / stats.totalFrames * 100,
                        (float)stats.pacerDroppedFrames / stats.decodedFrames * 100,
                        rttString,
                        (double)(stats.totalDecodeTimeUs / 1000.0) / stats.decodedFrames,
+                       (double)(stats.totalDecodeQueueTimeUs / 1000.0) / stats.decodedFrames,
+                       (double)(stats.totalCodecTimeUs / 1000.0) / stats.decodedFrames,
+                       stats.decoderIdleSleeps,
                        (double)(stats.totalPacerTimeUs / 1000.0) / stats.renderedFrames,
                        (double)(stats.totalRenderTimeUs / 1000.0) / stats.renderedFrames);
         if (ret < 0 || ret >= length - offset) {
@@ -974,7 +982,7 @@ void FFmpegVideoDecoder::stringifyVideoStats(VIDEO_STATS& stats, char* output, i
 void FFmpegVideoDecoder::logVideoStats(VIDEO_STATS& stats, const char* title)
 {
     if (stats.renderedFps > 0 || stats.renderedFrames != 0) {
-        char videoStatsStr[512];
+        char videoStatsStr[1024];
         stringifyVideoStats(stats, videoStatsStr, sizeof(videoStatsStr));
 
         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
@@ -2046,7 +2054,15 @@ void FFmpegVideoDecoder::decoderThreadProc()
                         // Count time in avcodec_send_packet() and avcodec_receive_frame()
                         // as time spent decoding. Also count time spent in the decode unit
                         // queue because that's directly caused by decoder latency.
-                        m_ActiveWndVideoStats.totalDecodeTimeUs += (LiGetMicroseconds() - du.enqueueTimeUs);
+                        uint64_t nowUs = LiGetMicroseconds();
+                        m_ActiveWndVideoStats.totalDecodeTimeUs += (nowUs - du.enqueueTimeUs);
+
+                        // [lowlatency] Split decode time into queueing and codec time
+                        if (!m_SubmitTimeQueue.isEmpty()) {
+                            uint64_t submitUs = m_SubmitTimeQueue.dequeue();
+                            m_ActiveWndVideoStats.totalDecodeQueueTimeUs += (submitUs - du.enqueueTimeUs);
+                            m_ActiveWndVideoStats.totalCodecTimeUs += (nowUs - submitUs);
+                        }
 
                         // Store the presentation time (90 kHz timebase)
                         frame->pts = (int64_t)du.rtpTimestamp;
@@ -2069,6 +2085,7 @@ void FFmpegVideoDecoder::decoderThreadProc()
                     }
                     else {
                         // No output data or input data. Let's wait a little bit.
+                        m_ActiveWndVideoStats.decoderIdleSleeps++;
                         SDL_Delay(2);
                     }
                 }
@@ -2199,6 +2216,7 @@ int FFmpegVideoDecoder::submitDecodeUnit(PDECODE_UNIT du)
 
     m_ActiveWndVideoStats.totalReassemblyTimeUs += (du->enqueueTimeUs - du->receiveTimeUs);
 
+    uint64_t submitTimeUs = LiGetMicroseconds();
     err = avcodec_send_packet(m_VideoDecoderCtx, m_Pkt);
     if (err < 0) {
         char errorstring[512];
@@ -2227,6 +2245,7 @@ int FFmpegVideoDecoder::submitDecodeUnit(PDECODE_UNIT du)
     }
 
     m_FrameInfoQueue.enqueue(*du);
+    m_SubmitTimeQueue.enqueue(submitTimeUs);
 
     m_FramesIn++;
     return DR_OK;
