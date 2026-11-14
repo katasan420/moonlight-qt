@@ -3,7 +3,6 @@
 #define AVMediaType AVMediaType_FFmpeg
 #include "vt.h"
 #undef AVMediaType
-#include "vt_lowlatency.h"
 
 #import <Cocoa/Cocoa.h>
 #import <VideoToolbox/VideoToolbox.h>
@@ -18,8 +17,7 @@ VTBaseRenderer::VTBaseRenderer(IFFmpegRenderer::RendererType type) :
     m_HdrMetadataChanged(false),
     m_MasteringDisplayColorVolume(nullptr),
     m_ContentLightLevelInfo(nullptr) {
-    // [lowlatency] Redirect FFmpeg's VT session creation before any decoder exists
-    VtLowLatency::installHook();
+
 }
 
 VTBaseRenderer::~VTBaseRenderer() {

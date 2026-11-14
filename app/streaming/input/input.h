@@ -168,7 +168,6 @@ private:
         KeyComboTogglePointerRegionLock,
         KeyComboQuitAndExit,
         KeyComboToggleKeyboardGrab,
-        KeyComboToggleVtRealTime, // [lowlatency]
         KeyComboMax
     };
 

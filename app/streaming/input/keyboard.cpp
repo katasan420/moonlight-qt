@@ -3,10 +3,6 @@
 #include <Limelight.h>
 #include "SDL_compat.h"
 
-#ifdef Q_OS_DARWIN
-#include "streaming/video/ffmpeg-renderers/vt_lowlatency.h"
-#endif
-
 #define VK_0 0x30
 #define VK_A 0x41
 
@@ -29,15 +25,6 @@
 void SdlInputHandler::performSpecialKeyCombo(KeyCombo combo)
 {
     switch (combo) {
-    case KeyComboToggleVtRealTime:
-#ifdef Q_OS_DARWIN
-        VtLowLatency::toggleRealTime();
-        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-                    "[lowlatency] VT RealTime toggled: %d",
-                    VtLowLatency::isRealTimeEnabled() ? 1 : 0);
-#endif
-        break;
-
     case KeyComboQuit:
         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
                     "Detected quit key combo");

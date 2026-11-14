@@ -410,12 +410,10 @@ macx {
     SOURCES += \
         streaming/video/ffmpeg-renderers/vt_base.mm \
         streaming/video/ffmpeg-renderers/vt_avsamplelayer.mm \
-        streaming/video/ffmpeg-renderers/vt_metal.mm \
-        streaming/video/ffmpeg-renderers/vt_lowlatency.mm
+        streaming/video/ffmpeg-renderers/vt_metal.mm
 
     HEADERS += \
-        streaming/video/ffmpeg-renderers/vt.h \
-        streaming/video/ffmpeg-renderers/vt_lowlatency.h
+        streaming/video/ffmpeg-renderers/vt.h
 }
 discord-rpc {
     message(Discord integration enabled)

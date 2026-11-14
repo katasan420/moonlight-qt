@@ -20,7 +20,6 @@ extern "C" {
 
 #ifdef Q_OS_DARWIN
 #include "ffmpeg-renderers/vt.h"
-#include "ffmpeg-renderers/vt_lowlatency.h"
 #endif
 
 #ifdef HAVE_LIBVA
@@ -977,22 +976,6 @@ void FFmpegVideoDecoder::stringifyVideoStats(VIDEO_STATS& stats, char* output, i
         }
 
         offset += ret;
-
-#ifdef Q_OS_DARWIN
-        // [lowlatency] Show the VideoToolbox real-time decoding state for A/B tests
-        ret = snprintf(&output[offset],
-                       length - offset,
-                       "VT RealTime (Ctrl+Alt+Shift+R): %s%s\n",
-                       VtLowLatency::isRealTimeEnabled() ? "ON" : "OFF",
-                       !VtLowLatency::isHookInstalled() ? " [hook failed]" :
-                           (VtLowLatency::hasSession() ? "" : " [no session]"));
-        if (ret < 0 || ret >= length - offset) {
-            SDL_assert(false);
-            return;
-        }
-
-        offset += ret;
-#endif
     }
 }
 

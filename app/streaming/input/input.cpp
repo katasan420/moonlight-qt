@@ -135,16 +135,6 @@ SdlInputHandler::SdlInputHandler(StreamingPreferences& prefs, int streamWidth, i
     m_SpecialKeyCombos[KeyComboToggleKeyboardGrab].scanCode = SDL_SCANCODE_K;
     m_SpecialKeyCombos[KeyComboToggleKeyboardGrab].enabled = WMUtils::isRunningDesktopEnvironment();
 
-    // [lowlatency] A/B toggle for VideoToolbox real-time decoding
-    m_SpecialKeyCombos[KeyComboToggleVtRealTime].keyCombo = KeyComboToggleVtRealTime;
-    m_SpecialKeyCombos[KeyComboToggleVtRealTime].keyCode = SDLK_r;
-    m_SpecialKeyCombos[KeyComboToggleVtRealTime].scanCode = SDL_SCANCODE_R;
-#ifdef Q_OS_DARWIN
-    m_SpecialKeyCombos[KeyComboToggleVtRealTime].enabled = true;
-#else
-    m_SpecialKeyCombos[KeyComboToggleVtRealTime].enabled = false;
-#endif
-
     m_OldIgnoreDevices = SDL_GetHint(SDL_HINT_GAMECONTROLLER_IGNORE_DEVICES);
     m_OldIgnoreDevicesExcept = SDL_GetHint(SDL_HINT_GAMECONTROLLER_IGNORE_DEVICES_EXCEPT);
 
